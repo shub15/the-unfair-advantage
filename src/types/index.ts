@@ -75,13 +75,54 @@ export interface BusinessIdea {
     role: 'entrepreneur' | 'mentor' | 'admin';
   }
   
-  export interface DashboardStats {
-    totalIdeas: number;
-    averageScore: number;
-    topCategory: string;
-    recentEvaluations: number;
+  // Add these interfaces to your existing types
+export interface DashboardStats {
+  totalIdeas: number
+  averageScore: number
+  completedEvaluations: number
+  pendingReviews: number
+  topCategory: string
+  improvementRate: number
+  thisWeek: {
+    ideas: number
+    change: number
   }
-  
+  thisMonth: {
+    evaluations: number
+    change: number
+  }
+}
+// Add these interfaces to your existing types
+export interface DashboardStats {
+  totalIdeas: number
+  averageScore: number
+  completedEvaluations: number
+  pendingReviews: number
+  topCategory: string
+  improvementRate: number
+  thisWeek: {
+    ideas: number
+    change: number
+  }
+  thisMonth: {
+    evaluations: number
+    change: number
+  }
+}
+
+export interface RecentEvaluation {
+  id: string
+  title: string
+  industry: string
+  overallScore: number
+  status: 'completed' | 'pending' | 'reviewing'
+  submittedAt: Date
+  completedAt?: Date
+  trend: 'up' | 'down' | 'stable'
+  highlights: string[]
+}
+
+
   export type Language = 'en' | 'hi' | 'ta' | 'te' | 'kn' | 'ml' | 'gu' | 'mr' | 'bn' | 'pa';
   
   export type Theme = 'light' | 'dark' | 'system';
