@@ -59,7 +59,7 @@ export default function IdeaSubmissionForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Language Selection */}
-        <FormField
+        {/* <FormField
           control={form.control}
           name="language"
           render={({ field }) => (
@@ -80,7 +80,7 @@ export default function IdeaSubmissionForm() {
               <FormMessage />
             </FormItem>
           )}
-        />
+        /> */}
 
         {/* Input Methods */}
         <Card>
