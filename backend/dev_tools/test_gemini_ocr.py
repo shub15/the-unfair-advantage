@@ -20,7 +20,7 @@ def test_pdf_upload(pdf_file_path):
         print(f"Error: File not found: {pdf_file_path}")
         return False
 
-    url = f"{BASE_URL}/upload/pdf"
+    url = f"{BASE_URL}/api/upload/pdf"
 
     try:
         with open(pdf_file_path, "rb") as file:
@@ -65,7 +65,7 @@ def test_image_structured_upload(image_file_path, use_gemini=True):
         print(f"Error: File not found: {image_file_path}")
         return False
 
-    url = f"{BASE_URL}/upload/image/structured"
+    url = f"{BASE_URL}/api/upload/image/structured"
 
     try:
         with open(image_file_path, "rb") as file:

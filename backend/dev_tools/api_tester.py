@@ -63,7 +63,7 @@ class APITester:
 
         with open(image_file_path, "rb") as f:
             files = {"file": f}
-            response = requests.post(f"{self.base_url}/upload/image", files=files)
+            response = requests.post(f"{self.base_url}/api/upload/image", files=files)
             print(f"Image Upload: {response.status_code}")
             if response.status_code == 200:
                 result = response.json()
@@ -80,7 +80,7 @@ class APITester:
 
         with open(pdf_file_path, "rb") as f:
             files = {"file": f}
-            response = requests.post(f"{self.base_url}/upload/pdf", files=files)
+            response = requests.post(f"{self.base_url}/api/upload/pdf", files=files)
             print(f"PDF Upload: {response.status_code}")
             if response.status_code == 200:
                 result = response.json()
@@ -107,7 +107,7 @@ class APITester:
             files = {"file": f}
             data = {"use_gemini": str(use_gemini).lower()}
             response = requests.post(
-                f"{self.base_url}/upload/image/structured", files=files, data=data
+                f"{self.base_url}/api/upload/image/structured", files=files, data=data
             )
             print(
                 f"Structured Image Upload (Gemini={use_gemini}): {response.status_code}"
