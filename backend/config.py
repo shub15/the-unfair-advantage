@@ -31,9 +31,19 @@ class Config:
         "m4a",
     }
 
+    # PDF processing configuration
+    PDF_ALLOWED_EXTENSIONS = {"pdf"}
+    IMAGE_ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
+
     # Google Cloud Platform configuration
     GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
     GOOGLE_APPLICATION_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
+    # Gemini API configuration
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+    # Poppler configuration for PDF processing
+    POPPLER_PATH = os.environ.get("POPPLER_PATH")  # Path to Poppler binaries
 
     # Google Cloud Speech-to-Text
     SPEECH_TO_TEXT_LANGUAGE_CODES = [
@@ -109,5 +119,5 @@ class Config:
         "hi": "Hindi",
         "mr": "Marathi",
         "gu": "Gujarati",
-        "od": "Odia"
+        "od": "Odia",
     }

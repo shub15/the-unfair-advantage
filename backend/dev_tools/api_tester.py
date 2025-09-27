@@ -55,6 +55,78 @@ class APITester:
 
         return response.status_code == 200
 
+    def test_image_upload(self, image_file_path):
+        """Test image upload (existing endpoint)"""
+        if not Path(image_file_path).exists():
+            print(f"Image file not found: {image_file_path}")
+            return False
+
+        with open(image_file_path, "rb") as f:
+            files = {"file": f}
+            response = requests.post(f"{self.base_url}/upload/image", files=files)
+            print(f"Image Upload: {response.status_code}")
+            if response.status_code == 200:
+                result = response.json()
+                print(f"Extracted text length: {len(result.get('extracted_text', ''))}")
+                print(f"Confidence: {result.get('confidence', 'N/A')}")
+
+        return response.status_code == 200
+
+    def test_pdf_upload(self, pdf_file_path):
+        """Test PDF upload with Gemini OCR"""
+        if not Path(pdf_file_path).exists():
+            print(f"PDF file not found: {pdf_file_path}")
+            return False
+
+        with open(pdf_file_path, "rb") as f:
+            files = {"file": f}
+            response = requests.post(f"{self.base_url}/upload/pdf", files=files)
+            print(f"PDF Upload: {response.status_code}")
+            if response.status_code == 200:
+                result = response.json()
+                print(f"Pages processed: {result.get('pages_processed', 'N/A')}")
+                print(f"Raw text length: {len(result.get('raw_text', ''))}")
+                print(f"Structured data: {bool(result.get('structured_data'))}")
+                if (
+                    result.get("structured_data")
+                    and "error" not in result["structured_data"]
+                ):
+                    print("✅ Structured extraction successful")
+                else:
+                    print("❌ Structured extraction failed")
+
+        return response.status_code == 200
+
+    def test_image_structured_upload(self, image_file_path, use_gemini=True):
+        """Test structured image upload"""
+        if not Path(image_file_path).exists():
+            print(f"Image file not found: {image_file_path}")
+            return False
+
+        with open(image_file_path, "rb") as f:
+            files = {"file": f}
+            data = {"use_gemini": str(use_gemini).lower()}
+            response = requests.post(
+                f"{self.base_url}/upload/image/structured", files=files, data=data
+            )
+            print(
+                f"Structured Image Upload (Gemini={use_gemini}): {response.status_code}"
+            )
+            if response.status_code == 200:
+                result = response.json()
+                print(f"OCR Method: {result.get('ocr_method', 'N/A')}")
+                print(f"Raw text length: {len(result.get('raw_text', ''))}")
+                print(f"Confidence: {result.get('confidence', 'N/A')}")
+                if (
+                    result.get("structured_data")
+                    and "error" not in result["structured_data"]
+                ):
+                    print("✅ Structured extraction successful")
+                else:
+                    print("❌ Structured extraction failed")
+
+        return response.status_code == 200
+
     def run_all_tests(self):
         """Run all available tests"""
         print("🧪 Running API Tests for The Unfair Advantage")
