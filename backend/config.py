@@ -107,12 +107,7 @@ class Config:
     SUPPORTED_LANGUAGES = {
         "en": "English",
         "hi": "Hindi",
-        "bn": "Bengali",
-        "ta": "Tamil",
-        "te": "Telugu",
         "mr": "Marathi",
         "gu": "Gujarati",
-        "kn": "Kannada",
-        "ml": "Malayalam",
-        "pa": "Punjabi",
+        "od": "Odia"
     }

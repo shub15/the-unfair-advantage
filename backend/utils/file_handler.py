@@ -1,15 +1,29 @@
 import os
 import uuid
 import hashlib
+import mimetypes
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from typing import Dict, Any, Optional
-import magic
 import shutil
 import logging
 
+# Try to import magic, but provide fallback if not available
+try:
+    import magic
+
+    HAS_MAGIC = True
+except ImportError:
+    HAS_MAGIC = False
+
 logger = logging.getLogger(__name__)
+
+# Log warning if magic is not available
+if not HAS_MAGIC:
+    logger.warning(
+        "python-magic not available, using mimetypes fallback for file type detection"
+    )
 
 
 class FileHandler:
@@ -120,22 +134,39 @@ class FileHandler:
     def _get_mime_type(self, file_path: str) -> str:
         """Get MIME type of the file"""
         try:
-            mime_type = magic.from_file(file_path, mime=True)
-            return mime_type
+            # Try magic first if available
+            if HAS_MAGIC:
+                mime_type = magic.from_file(file_path, mime=True)
+                return mime_type
+            else:
+                # Use mimetypes as fallback
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if mime_type:
+                    return mime_type
         except Exception as e:
             logger.warning(f"MIME type detection failed: {e}")
-            # Fallback to extension-based detection
-            extension = file_path.rsplit(".", 1)[1].lower() if "." in file_path else ""
-            mime_map = {
-                "jpg": "image/jpeg",
-                "jpeg": "image/jpeg",
-                "png": "image/png",
-                "pdf": "application/pdf",
-                "txt": "text/plain",
-                "mp3": "audio/mpeg",
-                "wav": "audio/wav",
-            }
-            return mime_map.get(extension, "application/octet-stream")
+
+        # Final fallback to extension-based detection
+        extension = file_path.rsplit(".", 1)[1].lower() if "." in file_path else ""
+        mime_map = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "bmp": "image/bmp",
+            "tiff": "image/tiff",
+            "pdf": "application/pdf",
+            "doc": "application/msword",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "txt": "text/plain",
+            "mp3": "audio/mpeg",
+            "wav": "audio/wav",
+            "ogg": "audio/ogg",
+            "m4a": "audio/mp4",
+            "flac": "audio/flac",
+            "aac": "audio/aac",
+        }
+        return mime_map.get(extension, "application/octet-stream")
 
     def _calculate_file_hash(self, file_path: str) -> str:
         """Calculate SHA-256 hash of the file"""

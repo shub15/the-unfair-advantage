@@ -1,9 +1,16 @@
 import os
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from werkzeug.datastructures import FileStorage
-import magic
 import logging
+
+# Try to import magic, but provide fallback if not available
+try:
+    import magic
+
+    HAS_MAGIC = True
+except ImportError:
+    HAS_MAGIC = False
 
 logger = logging.getLogger(__name__)
 
@@ -283,11 +290,20 @@ def _validate_mime_type(
         file_header = file.read(1024)  # Read first 1KB
         file.seek(0)  # Reset file pointer
 
-        # Use python-magic to detect MIME type
+        # Use python-magic to detect MIME type if available
         try:
-            mime_type = magic.from_buffer(file_header, mime=True)
+            if HAS_MAGIC:
+                mime_type = magic.from_buffer(file_header, mime=True)
+            else:
+                # Fallback to extension-based detection
+                extension = (
+                    file.filename.rsplit(".", 1)[1].lower()
+                    if "." in file.filename
+                    else ""
+                )
+                mime_type = _get_mime_type_by_extension(extension)
         except Exception:
-            # Fallback to basic detection
+            # Final fallback to basic detection
             extension = (
                 file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
             )
@@ -488,3 +504,47 @@ def _estimate_audio_duration(file_size: int, bitrate: int = 128) -> float:
         return max(0.1, estimated_duration)  # Minimum 0.1 seconds
     except Exception:
         return 60.0  # Default to 1 minute if calculation fails
+
+
+def validate_file_type(filename: str, allowed_extensions: List[str]) -> bool:
+    """
+    Validate file type based on extension
+
+    Args:
+        filename: Name of the file to validate
+        allowed_extensions: List of allowed file extensions (without dots)
+
+    Returns:
+        True if file type is allowed, False otherwise
+    """
+    if not filename or not allowed_extensions:
+        return False
+
+    if "." not in filename:
+        return False
+
+    file_extension = filename.rsplit(".", 1)[1].lower()
+    return file_extension in [ext.lower() for ext in allowed_extensions]
+
+
+def validate_file_size(file: FileStorage, max_size_mb: int = 16) -> bool:
+    """
+    Validate file size
+
+    Args:
+        file: File object to validate
+        max_size_mb: Maximum allowed size in MB
+
+    Returns:
+        True if size is acceptable, False otherwise
+    """
+    if not file:
+        return False
+
+    try:
+        file_size = _get_file_size(file)
+        max_size_bytes = max_size_mb * 1024 * 1024
+        return file_size <= max_size_bytes
+    except Exception as e:
+        logger.error(f"File size validation failed: {e}")
+        return False
