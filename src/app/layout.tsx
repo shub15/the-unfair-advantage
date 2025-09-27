@@ -57,6 +57,7 @@ export const metadata: Metadata = {
   title: 'The Unfair Advantage - AI Business Idea Evaluator',
   description: 'Transform your raw business ideas into structured, compelling business cases with AI-powered evaluation.',
   keywords: ['business ideas', 'entrepreneurship', 'AI evaluation', 'startup', 'Tata STRIVE'],
+  icons:"/logo.svg"
 }
 
 export default function RootLayout({

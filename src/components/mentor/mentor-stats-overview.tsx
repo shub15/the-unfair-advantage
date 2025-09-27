@@ -4,34 +4,31 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/auth-context'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
 import { 
-  Target, 
-  FileText, 
-  Award, 
-  Clock,
-  TrendingUp,
-  TrendingDown
+  Users, 
+  Clock, 
+  Star, 
+  MessageSquare
 } from 'lucide-react'
 import { databaseService } from '@/lib/database-service'
 
-interface UserStats {
-  totalIdeas: number
-  completedEvaluations: number
-  pendingEvaluations: number
-  reviewingEvaluations: number
-  averageScore: number
-  thisMonthIdeas: number
+interface MentorStats {
+  totalStudents: number
+  totalReviews: number
+  averageRating: number
+  totalRatings: number
+  pendingReviews: number
 }
 
-export default function StatsOverview() {
+export default function MentorStatsOverview() {
   const { user } = useAuth()
-  const [stats, setStats] = useState<UserStats>({
-    totalIdeas: 0,
-    completedEvaluations: 0,
-    pendingEvaluations: 0,
-    reviewingEvaluations: 0,
-    averageScore: 0,
-    thisMonthIdeas: 0
+  const [stats, setStats] = useState<MentorStats>({
+    totalStudents: 0,
+    totalReviews: 0,
+    averageRating: 0,
+    totalRatings: 0,
+    pendingReviews: 0
   })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,10 +41,10 @@ export default function StatsOverview() {
       setError(null)
       
       try {
-        const userStats = await databaseService.getUserEvaluationStats(user.id)
-        setStats(userStats)
+        const mentorStats = await databaseService.getMentorStats(user.id)
+        setStats(mentorStats)
       } catch (error) {
-        console.error('Error fetching stats:', error)
+        console.error('Error fetching mentor stats:', error)
         setError('Failed to load statistics')
       } finally {
         setIsLoading(false)
@@ -62,47 +59,35 @@ export default function StatsOverview() {
     value, 
     icon: Icon, 
     description,
-    progress,
-    trend
+    badge,
+    progress
   }: {
     title: string
     value: string | number
     icon: any
     description?: string
+    badge?: { text: string; variant: 'default' | 'destructive' | 'secondary' }
     progress?: number
-    trend?: number
   }) => (
     <Card className="relative overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          {badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
         
-        {trend !== undefined && (
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
-            {trend >= 0 ? (
-              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-            ) : (
-              <TrendingDown className="h-3 w-3 mr-1 text-red-600" />
-            )}
-            <span className={trend >= 0 ? 'text-green-600' : 'text-red-600'}>
-              {trend >= 0 ? '+' : ''}{trend} this month
-            </span>
-          </div>
-        )}
-        
-        {description && !trend && (
+        {description && (
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
         )}
         
         {progress !== undefined && (
           <div className="mt-3">
             <Progress value={progress} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {progress}% of target achieved
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{progress}% excellence rating</p>
           </div>
         )}
       </CardContent>
@@ -140,32 +125,33 @@ export default function StatsOverview() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        title="Total Ideas Submitted"
-        value={stats.totalIdeas}
-        trend={stats.thisMonthIdeas}
-        icon={FileText}
-      />
-      
-      <StatCard
-        title="Average Score"
-        value={stats.averageScore > 0 ? `${stats.averageScore}/100` : 'N/A'}
-        icon={Target}
-        description={stats.completedEvaluations > 0 ? `Based on ${stats.completedEvaluations} evaluations` : 'Complete an evaluation to see score'}
-        progress={stats.averageScore}
-      />
-      
-      <StatCard
-        title="Completed Evaluations"
-        value={stats.completedEvaluations}
-        icon={Award}
-        description={`${stats.totalIdeas - stats.completedEvaluations} in progress`}
+        title="Active Students"
+        value={stats.totalStudents}
+        icon={Users}
+        description={`${stats.totalStudents} entrepreneurs under guidance`}
       />
       
       <StatCard
         title="Pending Reviews"
-        value={stats.pendingEvaluations + stats.reviewingEvaluations}
+        value={stats.pendingReviews}
         icon={Clock}
-        description={stats.reviewingEvaluations > 0 ? `${stats.reviewingEvaluations} being reviewed` : 'Awaiting processing'}
+        description="Awaiting your feedback"
+        badge={stats.pendingReviews > 0 ? { text: 'Action Needed', variant: 'destructive' } : undefined}
+      />
+      
+      <StatCard
+        title="Average Rating"
+        value={stats.averageRating > 0 ? `${stats.averageRating.toFixed(1)}/5.0` : 'No ratings yet'}
+        icon={Star}
+        description={stats.totalRatings > 0 ? `Based on ${stats.totalRatings} reviews` : 'Complete reviews to get rated'}
+        progress={stats.averageRating > 0 ? (stats.averageRating / 5) * 100 : 0}
+      />
+      
+      <StatCard
+        title="Total Reviews"
+        value={stats.totalReviews}
+        icon={MessageSquare}
+        description="Completed feedback sessions"
       />
     </div>
   )

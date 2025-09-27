@@ -4,26 +4,13 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
-  PlusCircle, 
-  FileText, 
   BarChart3, 
   Users, 
-  Settings,
-  BookOpen,
-  MessageSquare,
   Award
 } from 'lucide-react'
 
 export default function QuickActions() {
   const actions = [
-    {
-      title: 'New Evaluation',
-      description: 'Submit a business idea for AI analysis',
-      icon: PlusCircle,
-      href: '/evaluate',
-      variant: 'default' as const,
-      featured: true
-    },
     {
       title: 'View Results',
       description: 'Check your latest evaluations',
@@ -32,31 +19,10 @@ export default function QuickActions() {
       variant: 'outline' as const
     },
     {
-      title: 'Browse Ideas',
-      description: 'Explore successful business concepts',
-      icon: FileText,
-      href: '/browse',
-      variant: 'outline' as const
-    },
-    {
       title: 'Find Mentors',
       description: 'Connect with industry experts',
       icon: Users,
       href: '/mentors',
-      variant: 'outline' as const
-    },
-    {
-      title: 'Learning Hub',
-      description: 'Access entrepreneurship resources',
-      icon: BookOpen,
-      href: '/learn',
-      variant: 'outline' as const
-    },
-    {
-      title: 'Community',
-      description: 'Join entrepreneur discussions',
-      icon: MessageSquare,
-      href: '/community',
       variant: 'outline' as const
     }
   ]
@@ -78,25 +44,18 @@ export default function QuickActions() {
               <Button
                 key={action.title}
                 variant={action.variant}
-                className={`h-auto p-4 justify-start ${
-                  action.featured ? 'bg-primary hover:bg-primary/90' : ''
-                }`}
+                className="h-auto p-4 justify-start"
                 asChild
               >
                 <Link href={action.href}>
-                  <div className="flex items-start gap-3 text-left">
-                    <Icon className={`h-5 w-5 mt-0.5 ${
-                      action.featured ? 'text-primary-foreground' : 'text-muted-foreground'
-                    }`} />
-                    <div>
-                      <div className={`font-medium ${
-                        action.featured ? 'text-primary-foreground' : ''
-                      }`}>
+                  {/* FIX: Replaced flexbox with a robust CSS Grid layout to prevent text overflow */}
+                  <div className="grid grid-cols-[auto_1fr] items-start gap-3 text-left w-full">
+                    <Icon className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div className="w-full">
+                      <div className="font-medium">
                         {action.title}
                       </div>
-                      <div className={`text-sm ${
-                        action.featured ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                      }`}>
+                      <div className="text-sm text-muted-foreground whitespace-normal">
                         {action.description}
                       </div>
                     </div>
