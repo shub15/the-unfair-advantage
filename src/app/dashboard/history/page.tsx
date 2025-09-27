@@ -12,9 +12,7 @@ import {
   Calendar, 
   Eye, 
   Download,
-  History,
-  TrendingUp,
-  TrendingDown
+  History
 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -97,20 +95,23 @@ export default function HistoryPage() {
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(eval => 
-        eval.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        eval.industry.toLowerCase().includes(searchQuery.toLowerCase())
+      // FIX: Renamed `eval` to `evaluation` to avoid using a reserved keyword.
+      filtered = filtered.filter((evaluation) => 
+        evaluation.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        evaluation.industry.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
     // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(eval => eval.status === statusFilter)
+      // FIX: Renamed `eval` to `evaluation`.
+      filtered = filtered.filter((evaluation) => evaluation.status === statusFilter)
     }
 
     // Industry filter
     if (industryFilter !== 'all') {
-      filtered = filtered.filter(eval => eval.industry === industryFilter)
+      // FIX: Renamed `eval` to `evaluation`.
+      filtered = filtered.filter((evaluation) => evaluation.industry === industryFilter)
     }
 
     setFilteredEvaluations(filtered)
@@ -165,7 +166,7 @@ export default function HistoryPage() {
             </div>
             
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full lg:w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -177,7 +178,7 @@ export default function HistoryPage() {
             </Select>
 
             <Select value={industryFilter} onValueChange={setIndustryFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full lg:w-[180px]">
                 <SelectValue placeholder="Industry" />
               </SelectTrigger>
               <SelectContent>
@@ -220,10 +221,10 @@ export default function HistoryPage() {
               {filteredEvaluations.map((evaluation) => (
                 <div 
                   key={evaluation.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-4"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
                       <h3 className="font-semibold">{evaluation.title}</h3>
                       <Badge variant="secondary">{evaluation.industry}</Badge>
                       <Badge className={getStatusColor(evaluation.status)}>
@@ -244,30 +245,23 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
                     {evaluation.status === 'completed' && (
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <div className={`text-2xl font-bold ${getScoreColor(evaluation.overallScore)}`}>
                           {evaluation.overallScore}
                           <span className="text-sm text-muted-foreground">/100</span>
                         </div>
-                        <div className="flex items-center gap-1 text-xs">
-                          {evaluation.overallScore >= 75 ? (
-                            <TrendingUp className="h-3 w-3 text-green-600" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3 text-red-600" />
-                          )}
-                        </div>
                       </div>
                     )}
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 ml-auto">
                       {evaluation.status === 'completed' && (
                         <>
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/results/${evaluation.id}`}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
+                              <Eye className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">View</span>
                             </Link>
                           </Button>
                           <Button variant="ghost" size="sm">
