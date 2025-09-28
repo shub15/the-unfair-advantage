@@ -140,44 +140,7 @@ export default function IdeaSubmissionForm() {
         </Card>
 
         {/* Additional Details */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="industry"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Industry</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select industry" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {INDUSTRIES.map((industry) => (
-                      <SelectItem key={industry} value={industry}>{industry}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="targetMarket"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Target Market</FormLabel>
-                <FormControl>
-                  <Input placeholder="Who is your target audience?" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {/*  */}
 
         {/* Extracted Text Preview */}
         {extractedText && (

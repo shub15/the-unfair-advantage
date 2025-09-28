@@ -1,65 +1,48 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Header from '@/components/layout/header';
+import { CheckCircle, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useEvaluationStore } from '@/store/evaluation-store';
+
 import EvaluationCard from '@/components/evaluation/evaluation-card';
 import ScoreVisualization from '@/components/evaluation/score-visualization';
 import FeedbackPanel from '@/components/evaluation/feedback-panel';
-import Header from '@/components/layout/header';
-import { CheckCircle, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { EvaluationResponse } from '@/lib/api-client';
 
-function ResultsContent({ id }: { id: string }) {
-  const [evaluation, setEvaluation] = useState<EvaluationResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const dataStr = searchParams.get('data');
-
-    if (dataStr) {
-      try {
-        const data = JSON.parse(decodeURIComponent(dataStr));
-        setEvaluation(data);
-      } catch (e) {
-        setError("Failed to parse evaluation data from URL.");
-      }
-    } else {
-      setError("Report data not found in URL. Please upload a document again.");
-    }
-
-    setIsLoading(false);
-  }, [id, searchParams]);
+export default function ResultsPage() {
+  const { evaluationResult } = useEvaluationStore();
   
-  if (isLoading) {
+  if (!evaluationResult) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2">Loading report...</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container mx-auto flex items-center justify-center" style={{ minHeight: 'calc(100vh - 80px)' }}>
+          <div className="w-full max-w-lg text-center">
+            <Card>
+              <CardHeader>
+                <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <CardTitle>No Evaluation Data Found</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-6">
+                  It looks like you've landed on the results page directly. Please go back and upload a document to generate a new report.
+                </p>
+                <Button asChild>
+                  <Link href="/evaluate">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Evaluation Page
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
     );
   }
 
-  if (error || !evaluation) {
-    return (
-       <div className="flex min-h-screen items-center justify-center text-center p-4">
-        <div>
-          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4"/>
-          <h2 className="text-xl font-semibold mb-2">Could Not Display Report</h2>
-          <p className="text-muted-foreground mb-4">{error || "No evaluation data was found."}</p>
-          <Button asChild>
-            <Link href="/evaluate">Evaluate a New Idea</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -75,33 +58,19 @@ function ResultsContent({ id }: { id: string }) {
           </div>
           <div className="flex items-center mb-8">
             <CheckCircle className="h-6 w-6 text-green-600 mr-2" />
-            <h1 className="text-3xl font-bold">Evaluation Results</h1>
+            <h1 className="text-3xl font-bold">Extraction Results</h1>
           </div>
           <div className="grid lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-6">
-              <EvaluationCard evaluation={evaluation} />
-              <FeedbackPanel feedback={evaluation} />
+              <EvaluationCard evaluation={evaluationResult} />
+              <FeedbackPanel />
             </div>
             <div className="lg:col-span-4">
-              <ScoreVisualization scores={evaluation} />
+              <ScoreVisualization scores={evaluationResult} />
             </div>
           </div>
         </div>
       </main>
     </div>
   );
-}
-
-// **FIX: Wrap the main component in Suspense to allow useSearchParams to function correctly**
-export default function ResultsPage({ params }: { params: { id: string } }) {
-  return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2">Loading...</p>
-      </div>
-    }>
-      <ResultsContent id={params.id} />
-    </Suspense>
-  )
 }

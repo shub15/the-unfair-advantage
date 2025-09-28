@@ -1,7 +1,6 @@
 // 'use client'
 
 // import { useState } from 'react'
-// import { useRouter } from 'next/navigation' // Import for redirection
 // import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // import { Button } from '@/components/ui/button'
 // import { Camera, FileImage, CheckCircle, AlertCircle, FileText } from 'lucide-react'
@@ -11,7 +10,7 @@
 // import { toast } from 'sonner'
 // import { apiClient } from '@/lib/api-client'
 // import CameraModal from '@/components/ui/camera-modal'
-// import ProcessingLoader from '@/components/common/processing-loader' // Import the new loader
+// import ProcessingLoader from '@/components/common/processing-loader' // <-- Import the new loader
 
 // interface HandwritingUploadProps {
 //   onTextExtracted?: (text: string) => void
@@ -30,7 +29,6 @@
 //   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 //   const [showCameraModal, setShowCameraModal] = useState(false)
 //   const [error, setError] = useState<string>('')
-//   const router = useRouter() // Initialize router
 
 //   const processFile = async (file: File) => {
 //     try {
@@ -56,21 +54,33 @@
 //       }
       
 //       const extractedText = response.data?.raw_text || response.data?.extracted_text;
-//       const submissionId = response.data?.submission_id;
 
-//       if (response.success && extractedText && submissionId) {
-//         toast.success(`File processed successfully! Redirecting to results...`);
+//       if (response.success && extractedText) {
+//         const uploadData = response.data;
+//         const handwritingResult: HandwritingResult = {
+//           extractedText: extractedText, 
+//           confidence: uploadData.confidence ,
+//           detectedLanguage: uploadData.detected_language
+//         }
+
+//         setResult(handwritingResult)
         
-//         // Redirect to the results page
-//         router.push(`/results/${submissionId}`);
-        
+//         if (onTextExtracted) {
+//           onTextExtracted(handwritingResult.extractedText)
+//         }
+
+//         toast.success(
+//           `Text extracted successfully! Found ${handwritingResult.extractedText.length} characters.`
+//         )
 //       } else {
 //         throw new Error(response.error || 'Failed to extract text from file')
 //       }
 
 //     } catch (error: any) {
+//       console.error('File processing error:', error)
 //       setError(error.message || 'Failed to process file')
 //       toast.error(`Processing failed. Please try again with a clearer file.`)
+//     } finally {
 //       setIsProcessing(false)
 //     }
 //   }
@@ -119,6 +129,7 @@
 
 //   return (
 //     <div className="space-y-4">
+//       {/* --- RENDER NEW LOADER WHEN PROCESSING --- */}
 //       {isProcessing ? (
 //         <ProcessingLoader />
 //       ) : (
@@ -164,6 +175,7 @@
 //         </>
 //       )}
 
+//       {/* Error Display */}
 //       {error && !isProcessing && (
 //         <Card className="border-red-200 bg-red-50">
 //           <CardContent className="p-4">
@@ -181,7 +193,8 @@
 //         </Card>
 //       )}
 
-//       {uploadedFile && !isProcessing && result && (
+//       {/* Preview and Results */}
+//       {uploadedFile && !isProcessing && (
 //         <div className="grid md:grid-cols-2 gap-4">
 //           <Card>
 //             <CardHeader className="pb-3">
@@ -213,40 +226,43 @@
 //             </CardContent>
 //           </Card>
           
-//           <Card className="border-green-200">
-//             <CardHeader className="pb-3">
-//               <CardTitle className="text-lg flex items-center gap-2">
-//                 <CheckCircle className="h-5 w-5 text-green-600" />
-//                 Extracted Text
-//               </CardTitle>
-//             </CardHeader>
-//             <CardContent className="space-y-3">
-//               <div className="flex justify-between text-sm">
-//                 <span className="text-muted-foreground">
-//                   Confidence: <span className="font-medium">{Math.round(result.confidence * 100)}%</span>
-//                 </span>
-//                 <span className="text-muted-foreground">
-//                   Characters: <span className="font-medium">{result.extractedText.length}</span>
-//                 </span>
-//               </div>
-              
-//               <div className="p-3 bg-muted rounded text-sm max-h-32 overflow-y-auto">
-//                 {result.extractedText || 'No text detected'}
-//               </div>
-              
-//               <Button 
-//                 onClick={() => result && onTextExtracted?.(result.extractedText)}
-//                 className="w-full"
-//                 size="sm"
-//                 disabled={!result.extractedText}
-//               >
-//                 Use This Text
-//               </Button>
-//             </CardContent>
-//           </Card>
+//           {result && (
+//              <Card className="border-green-200">
+//               <CardHeader className="pb-3">
+//                 <CardTitle className="text-lg flex items-center gap-2">
+//                   <CheckCircle className="h-5 w-5 text-green-600" />
+//                   Extracted Text
+//                 </CardTitle>
+//               </CardHeader>
+//               <CardContent className="space-y-3">
+//                 <div className="flex justify-between text-sm">
+//                   <span className="text-muted-foreground">
+//                     Confidence: <span className="font-medium">{Math.round(result.confidence * 100)}%</span>
+//                   </span>
+//                   <span className="text-muted-foreground">
+//                     Characters: <span className="font-medium">{result.extractedText.length}</span>
+//                   </span>
+//                 </div>
+                
+//                 <div className="p-3 bg-muted rounded text-sm max-h-32 overflow-y-auto">
+//                   {result.extractedText || 'No text detected'}
+//                 </div>
+                
+//                 <Button 
+//                   onClick={() => result && onTextExtracted?.(result.extractedText)}
+//                   className="w-full"
+//                   size="sm"
+//                   disabled={!result.extractedText}
+//                 >
+//                   Use This Text
+//                 </Button>
+//               </CardContent>
+//             </Card>
+//           )}
 //         </div>
 //       )}
       
+//       {/* Instructions */}
 //       {!uploadedFile && !isProcessing && !error && (
 //         <Card className="bg-muted/50">
 //           <CardContent className="p-4">
@@ -284,16 +300,16 @@ import { toast } from 'sonner'
 import { apiClient } from '@/lib/api-client'
 import CameraModal from '@/components/ui/camera-modal'
 import ProcessingLoader from '@/components/common/processing-loader'
+import { useEvaluationStore } from '@/store/evaluation-store' // Import the new Zustand store
 
-interface HandwritingUploadProps {
-  onTextExtracted?: (text: string) => void
-}
-
-export default function HandwritingUpload({ onTextExtracted }: HandwritingUploadProps) {
+export default function HandwritingUpload() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string>('');
   const [showCameraModal, setShowCameraModal] = useState(false);
   const router = useRouter();
+  
+  // Get the action from the Zustand store to set the result
+  const { setEvaluationResult } = useEvaluationStore();
 
   const processFile = async (file: File) => {
     try {
@@ -312,16 +328,12 @@ export default function HandwritingUpload({ onTextExtracted }: HandwritingUpload
       const submissionId = response.data?.submission_id;
 
       if (response.success && response.data && submissionId) {
-        toast.info("File processed. Saving results to your dashboard...");
-
-        // Save the result to Supabase before redirecting
-        const saveResponse = await apiClient.saveEvaluationResult(submissionId, response.data);
-
-        if (!saveResponse.success) {
-          throw new Error(saveResponse.error || "Could not save the report.");
-        }
+        toast.success(`File processed successfully! Redirecting to your report...`);
         
-        toast.success("Report saved! Redirecting...");
+        // **FIX: Save the full response to the global state**
+        setEvaluationResult(response.data);
+        
+        // Redirect to the results page
         router.push(`/results/${submissionId}`);
         
       } else {
@@ -420,23 +432,8 @@ export default function HandwritingUpload({ onTextExtracted }: HandwritingUpload
               </CardContent>
             </Card>
           )}
-
-          {!isProcessing && !error && (
-            <Card className="bg-muted/50">
-              <CardContent className="p-4">
-                <h4 className="font-medium mb-2">📝 Tips for best results:</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Use good lighting and avoid shadows</li>
-                  <li>• Take photos straight-on, not at an angle</li>
-                  <li>• For PDFs, ensure the text is clear and scannable</li>
-                  <li>• Ensure handwriting is clear and legible</li>
-                </ul>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
-
       <CameraModal
         isOpen={showCameraModal}
         onClose={() => setShowCameraModal(false)}
