@@ -17,6 +17,14 @@ class UserStatus(Enum):
     SUSPENDED = "suspended"
 
 
+class UserRole(Enum):
+    """User roles for authorization"""
+
+    USER = "user"
+    ADMIN = "admin"
+    MENTOR = "mentor"
+
+
 @dataclass
 class ProcessedDocument:
     """Document processing result storage"""
@@ -59,6 +67,7 @@ class User:
     supabase_user_id: str  # Supabase user UUID
     profile: UserProfile
     status: UserStatus = UserStatus.ACTIVE
+    role: UserRole = UserRole.USER
 
     # Document processing history
     processed_documents: List[ProcessedDocument] = field(default_factory=list)
@@ -94,6 +103,7 @@ class User:
                 "metadata": self.profile.metadata,
             },
             "status": self.status.value,
+            "role": self.role.value,
             "processed_documents": [
                 {
                     "id": doc.id,
@@ -160,6 +170,7 @@ class User:
             supabase_user_id=data.get("supabase_user_id"),
             profile=profile,
             status=UserStatus(data.get("status", "active")),
+            role=UserRole(data.get("role", "user")),
             processed_documents=processed_docs,
             total_documents_processed=data.get("total_documents_processed", 0),
             total_pages_processed=data.get("total_pages_processed", 0),

@@ -1,5 +1,6 @@
 """
-Authentication middleware for Supabase integration
+Authentication middleware for Flask routes
+Handles Supabase token verification and user authorization
 """
 
 import logging
@@ -7,165 +8,237 @@ from functools import wraps
 from flask import request, jsonify, g
 from services.user_service import UserService
 
+logger = logging.getLogger(__name__)
+
+
+def extract_token_from_header():
+    """Extract Bearer token from Authorization header"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return None
+
+    # Expected format: "Bearer <token>"
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+
+    return parts[1]
+
+
+def verify_and_get_user(access_token):
+    """Verify token and get user from database"""
+    try:
+        user_service = UserService()
+
+        # Verify token with Supabase
+        supabase_user_data = user_service.verify_access_token(access_token)
+        if not supabase_user_data:
+            return None
+
+        # Get or create user in MongoDB
+        user = user_service.get_or_create_user(supabase_user_data)
+        return user
+
+    except Exception as e:
+        logger.error(f"Error verifying user: {str(e)}")
+        return None
+
 
 def require_auth(f):
-    """
-    Decorator to require authentication for API endpoints
-    Expects Authorization header with Bearer token
-    """
+    """Decorator that requires valid authentication"""
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        logger = logging.getLogger(__name__)
+        access_token = extract_token_from_header()
 
-        try:
-            # Get authorization header
-            auth_header = request.headers.get("Authorization")
-
-            if not auth_header:
-                return (
-                    jsonify(
-                        {
-                            "error": "Authorization header missing",
-                            "message": "Please provide an access token in the Authorization header",
-                        }
-                    ),
-                    401,
-                )
-
-            # Extract token from "Bearer <token>" format
-            if not auth_header.startswith("Bearer "):
-                return (
-                    jsonify(
-                        {
-                            "error": "Invalid authorization format",
-                            "message": "Authorization header must be in format: Bearer <token>",
-                        }
-                    ),
-                    401,
-                )
-
-            access_token = auth_header.split(" ")[1]
-
-            # Initialize user service
-            user_service = UserService()
-
-            # Verify token with Supabase
-            supabase_user_data = user_service.verify_access_token(access_token)
-
-            if not supabase_user_data:
-                return (
-                    jsonify(
-                        {
-                            "error": "Invalid or expired token",
-                            "message": "The provided access token is invalid or has expired",
-                        }
-                    ),
-                    401,
-                )
-
-            # Get or create user in local MongoDB
-            user = user_service.get_or_create_user(supabase_user_data)
-
-            if not user:
-                return (
-                    jsonify(
-                        {
-                            "error": "User creation failed",
-                            "message": "Failed to create or retrieve user account",
-                        }
-                    ),
-                    500,
-                )
-
-            # Store user data in Flask's request context
-            g.current_user = user
-            g.supabase_user_data = supabase_user_data
-            g.access_token = access_token
-
-            return f(*args, **kwargs)
-
-        except Exception as e:
-            logger.error(f"Authentication middleware error: {str(e)}")
+        if not access_token:
             return (
                 jsonify(
                     {
-                        "error": "Authentication error",
-                        "message": "An error occurred during authentication",
+                        "error": "Authentication required",
+                        "message": "No access token provided",
                     }
                 ),
-                500,
+                401,
             )
+
+        user = verify_and_get_user(access_token)
+        if not user:
+            return (
+                jsonify(
+                    {
+                        "error": "Authentication failed",
+                        "message": "Invalid or expired access token",
+                    }
+                ),
+                401,
+            )
+
+        # Store user in Flask's g object for use in the route
+        g.current_user = user
+
+        return f(*args, **kwargs)
 
     return decorated_function
 
 
 def optional_auth(f):
-    """
-    Decorator for optional authentication
-    Sets g.current_user if valid token is provided, otherwise continues without auth
-    """
+    """Decorator that allows optional authentication"""
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        logger = logging.getLogger(__name__)
+        access_token = extract_token_from_header()
 
-        try:
-            # Initialize default values
+        if access_token:
+            user = verify_and_get_user(access_token)
+            g.current_user = user
+        else:
             g.current_user = None
-            g.supabase_user_data = None
-            g.access_token = None
 
-            # Get authorization header
-            auth_header = request.headers.get("Authorization")
+        return f(*args, **kwargs)
 
-            if auth_header and auth_header.startswith("Bearer "):
-                access_token = auth_header.split(" ")[1]
+    return decorated_function
 
-                # Initialize user service
-                user_service = UserService()
 
-                # Verify token with Supabase
-                supabase_user_data = user_service.verify_access_token(access_token)
+def require_admin(f):
+    """Decorator that requires admin or mentor role"""
 
-                if supabase_user_data:
-                    # Get or create user in local MongoDB
-                    user = user_service.get_or_create_user(supabase_user_data)
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        current_user = getattr(g, "current_user", None)
 
-                    if user:
-                        g.current_user = user
-                        g.supabase_user_data = supabase_user_data
-                        g.access_token = access_token
+        if not current_user:
+            return (
+                jsonify(
+                    {
+                        "error": "Authentication required",
+                        "message": "User not authenticated",
+                    }
+                ),
+                401,
+            )
 
-            return f(*args, **kwargs)
+        user_service = UserService()
+        if not user_service.is_admin(current_user.supabase_user_id):
+            return (
+                jsonify(
+                    {
+                        "error": "Access denied",
+                        "message": "Admin or mentor privileges required",
+                    }
+                ),
+                403,
+            )
 
-        except Exception as e:
-            logger.error(f"Optional authentication middleware error: {str(e)}")
-            # Continue without authentication on error
-            return f(*args, **kwargs)
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def require_mentor(f):
+    """Decorator that requires mentor role specifically"""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        current_user = getattr(g, "current_user", None)
+
+        if not current_user:
+            return (
+                jsonify(
+                    {
+                        "error": "Authentication required",
+                        "message": "User not authenticated",
+                    }
+                ),
+                401,
+            )
+
+        user_service = UserService()
+        if not user_service.is_mentor(current_user.supabase_user_id):
+            return (
+                jsonify(
+                    {
+                        "error": "Access denied",
+                        "message": "Mentor privileges required",
+                    }
+                ),
+                403,
+            )
+
+        return f(*args, **kwargs)
 
     return decorated_function
 
 
 def get_current_user():
-    """
-    Helper function to get current authenticated user
-    Returns None if no user is authenticated
-    """
+    """Helper function to get the current authenticated user"""
     return getattr(g, "current_user", None)
 
 
-def get_supabase_user_data():
+def require_self_or_admin(user_id_param="user_id"):
     """
-    Helper function to get Supabase user data
-    Returns None if no user is authenticated
+    Decorator that requires the user to be accessing their own data or be an admin
+    user_id_param: the parameter name that contains the user ID to check
     """
-    return getattr(g, "supabase_user_data", None)
+
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            current_user = getattr(g, "current_user", None)
+
+            if not current_user:
+                return (
+                    jsonify(
+                        {
+                            "error": "Authentication required",
+                            "message": "User not authenticated",
+                        }
+                    ),
+                    401,
+                )
+
+            # Get the user ID from route parameters or request data
+            target_user_id = kwargs.get(user_id_param) or request.json.get(
+                user_id_param
+            )
+
+            # Allow if user is accessing their own data
+            if target_user_id == current_user.supabase_user_id:
+                return f(*args, **kwargs)
+
+            # Allow if user is admin or mentor
+            user_service = UserService()
+            if user_service.is_admin(current_user.supabase_user_id):
+                return f(*args, **kwargs)
+
+            return (
+                jsonify(
+                    {
+                        "error": "Access denied",
+                        "message": "You can only access your own data",
+                    }
+                ),
+                403,
+            )
+
+        return decorated_function
+
+    return decorator
 
 
-def get_access_token():
+def rate_limit_by_user(max_requests=100, window_minutes=60):
     """
-    Helper function to get current access token
-    Returns None if no token is present
+    Simple rate limiting decorator (placeholder for future implementation)
+    This would need a proper cache/Redis implementation in production
     """
-    return getattr(g, "access_token", None)
+
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # TODO: Implement actual rate limiting logic
+            # For now, just pass through
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator

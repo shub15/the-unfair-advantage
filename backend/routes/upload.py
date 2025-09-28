@@ -12,6 +12,7 @@ from datetime import datetime
 from services.ocr_service import OCRService
 from services.speech_service import SpeechService
 from services.user_service import UserService
+from services.business_analysis_service import BusinessAnalysisService
 from utils.validators import validate_file_type, validate_file_size
 from middleware.auth import require_auth, optional_auth, get_current_user
 from models.user import ProcessedDocument
@@ -94,8 +95,12 @@ def upload_image():
 
 
 @upload_bp.route("/audio", methods=["POST"])
+@optional_auth
 def upload_audio():
-    """Handle audio upload for speech-to-text processing"""
+    """Handle audio upload for speech-to-text processing with structured data extraction"""
+    start_time = time.time()
+    file_path = None
+
     try:
         if "file" not in request.files:
             return jsonify({"error": "No file provided"}), 400
@@ -104,13 +109,22 @@ def upload_audio():
         if file.filename == "":
             return jsonify({"error": "No file selected"}), 400
 
-        if not validate_file_type(file.filename, ["mp3", "wav", "ogg", "m4a"]):
+        if not validate_file_type(
+            file.filename, ["mp3", "wav", "ogg", "mp4", "m4a", "flac"]
+        ):
             return jsonify({"error": "Invalid audio file type"}), 400
+
+        # Check file size
+        if not validate_file_size(file):
+            return jsonify({"error": "File size too large"}), 400
 
         # Save file
         filename = secure_filename(file.filename)
         file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
         file.save(file_path)
+
+        # Get file size for storage tracking
+        file_size = os.path.getsize(file_path)
 
         # Process with Speech-to-Text
         speech_service = SpeechService()
@@ -118,31 +132,112 @@ def upload_audio():
         transcription_result = speech_service.transcribe_audio(file_path, language_code)
 
         # Clean up file
-        os.remove(file_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
         if "error" in transcription_result:
             return jsonify(transcription_result), 500
 
-        submission_id = str(uuid.uuid4())
-
-        return (
-            jsonify(
-                {
-                    "submission_id": submission_id,
-                    "transcript": transcription_result["full_transcript"],
-                    "detected_language": transcription_result["detected_language"],
-                    "confidence": (
-                        transcription_result["transcriptions"][0]["confidence"]
-                        if transcription_result["transcriptions"]
-                        else 0
-                    ),
-                    "status": "ready_for_evaluation",
-                }
-            ),
-            200,
+        # Extract structured data from transcript using OCR service
+        ocr_service = OCRService()
+        structured_data = ocr_service.extract_structured_data(
+            transcription_result["full_transcript"]
         )
 
+        # Perform comprehensive business analysis
+        business_service = BusinessAnalysisService()
+
+        # Transform structured data to comprehensive format for analysis
+        comprehensive_business_data = (
+            business_service.analyze_business_from_single_source(structured_data)
+        )
+
+        # Calculate business score
+        business_score = business_service.calculate_comprehensive_business_score(
+            comprehensive_business_data
+        )
+
+        # Generate comprehensive business case
+        business_case = business_service.generate_comprehensive_business_case(
+            comprehensive_business_data,
+            business_score,
+            {},  # No OCR data for audio-only upload
+            transcription_result["full_transcript"],
+        )
+
+        submission_id = str(uuid.uuid4())
+        processing_time = time.time() - start_time
+
+        # Store document in user's history if authenticated
+        current_user = get_current_user()
+        if current_user:
+            user_service = UserService()
+            processed_doc = ProcessedDocument(
+                id=submission_id,
+                original_filename=file.filename,
+                file_type="audio",
+                upload_timestamp=datetime.now(),
+                processing_method=transcription_result.get(
+                    "processing_method", "speech_to_text"
+                ),
+                raw_text=transcription_result["full_transcript"],
+                structured_data=structured_data,
+                confidence=(
+                    transcription_result["transcriptions"][0]["confidence"]
+                    if transcription_result["transcriptions"]
+                    else 0
+                ),
+                pages_processed=1,  # Audio as single "page"
+                file_size=file_size,
+                processing_time=processing_time,
+                ocr_metadata={
+                    "audio_processing": True,
+                    "detected_language": transcription_result["detected_language"],
+                    "duration_seconds": transcription_result.get("duration_seconds", 0),
+                    "language_code": language_code,
+                    "business_score": business_score,
+                },
+            )
+
+            # Save to user's document history
+            user_service.add_processed_document(current_user, processed_doc)
+
+        response_data = {
+            "submission_id": submission_id,
+            "transcript": transcription_result["full_transcript"],
+            "structured_data": structured_data,
+            # "comprehensive_business_data": comprehensive_business_data,
+            # "business_score": business_score,
+            # "business_case": business_case,
+            "detected_language": transcription_result["detected_language"],
+            "confidence": (
+                transcription_result["transcriptions"][0]["confidence"]
+                if transcription_result["transcriptions"]
+                else 0
+            ),
+            "processing_method": transcription_result.get(
+                "processing_method", "speech_to_text"
+            ),
+            "duration_seconds": transcription_result.get("duration_seconds", 0),
+            "processing_time": f"{processing_time:.2f}s",
+            "file_size": file_size,
+            "status": "analyzed",
+        }
+
+        # Add user info if authenticated
+        if current_user:
+            response_data["saved_to_history"] = True
+            response_data["user_id"] = current_user._id
+
+        return jsonify(response_data), 200
+
     except Exception as e:
+        # Ensure cleanup on any error
+        try:
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
+        except:
+            pass
         return jsonify({"error": str(e)}), 500
 
 
@@ -192,6 +287,27 @@ def upload_pdf():
         # Extract structured data from OCR text
         structured_data = ocr_service.extract_structured_data(ocr_result["full_text"])
 
+        # Perform comprehensive business analysis
+        business_service = BusinessAnalysisService()
+
+        # Transform structured data to comprehensive format for analysis
+        comprehensive_business_data = (
+            business_service.analyze_business_from_single_source(structured_data)
+        )
+
+        # Calculate business score
+        business_score = business_service.calculate_comprehensive_business_score(
+            comprehensive_business_data
+        )
+
+        # Generate comprehensive business case
+        business_case = business_service.generate_comprehensive_business_case(
+            comprehensive_business_data,
+            business_score,
+            structured_data,
+            "",  # No transcript for PDF-only upload
+        )
+
         # Clean up file
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -229,11 +345,14 @@ def upload_pdf():
             "submission_id": submission_id,
             "raw_text": ocr_result["full_text"],
             "structured_data": structured_data,
+            # "comprehensive_business_data": comprehensive_business_data,
+            # "business_score": business_score,
+            # "business_case": business_case,
             "pages_processed": ocr_result.get("pages_processed", 0),
             "confidence": ocr_result.get("confidence", 0),
             "processing_time": f"{processing_time:.2f}s",
             "file_size": file_size,
-            "status": "ready_for_evaluation",
+            "status": "analyzed",
         }
 
         # Add user info if authenticated
@@ -295,6 +414,27 @@ def upload_image_structured():
         # Extract structured data from OCR text
         structured_data = ocr_service.extract_structured_data(ocr_result["full_text"])
 
+        # Perform comprehensive business analysis
+        business_service = BusinessAnalysisService()
+
+        # Transform structured data to comprehensive format for analysis
+        comprehensive_business_data = (
+            business_service.analyze_business_from_single_source(structured_data)
+        )
+
+        # Calculate business score
+        business_score = business_service.calculate_comprehensive_business_score(
+            comprehensive_business_data
+        )
+
+        # Generate comprehensive business case
+        business_case = business_service.generate_comprehensive_business_case(
+            comprehensive_business_data,
+            business_score,
+            structured_data,
+            "",  # No transcript for image-only upload
+        )
+
         # Clean up file
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -333,11 +473,14 @@ def upload_image_structured():
             "submission_id": submission_id,
             "raw_text": ocr_result["full_text"],
             "structured_data": structured_data,
+            # "comprehensive_business_data": comprehensive_business_data,
+            # "business_score": business_score,
+            # "business_case": business_case,
             "confidence": ocr_result["confidence"],
             "ocr_method": ocr_method,
             "processing_time": f"{processing_time:.2f}s",
             "file_size": file_size,
-            "status": "ready_for_evaluation",
+            "status": "analyzed",
         }
 
         # Add user info if authenticated
@@ -354,6 +497,162 @@ def upload_image_structured():
                 os.remove(file_path)
         except:
             pass
+        return jsonify({"error": str(e)}), 500
+
+
+@upload_bp.route("/comprehensive", methods=["POST"])
+@optional_auth
+def upload_comprehensive():
+    """Handle combined document and audio upload for comprehensive business analysis"""
+    start_time = time.time()
+    file_paths = []
+
+    try:
+        # Initialize services
+        ocr_service = OCRService()
+        speech_service = SpeechService()
+        business_service = BusinessAnalysisService()
+
+        ocr_data = {}
+        transcript = ""
+        language_code = request.form.get("language", "en-IN")
+
+        # Process document if provided
+        if "document" in request.files:
+            doc_file = request.files["document"]
+            if doc_file.filename != "":
+                if not validate_file_type(
+                    doc_file.filename, ["pdf", "png", "jpg", "jpeg"]
+                ):
+                    return jsonify({"error": "Invalid document file type"}), 400
+
+                # Save document temporarily
+                doc_filename = secure_filename(doc_file.filename)
+                doc_path = os.path.join(
+                    current_app.config["UPLOAD_FOLDER"], doc_filename
+                )
+                doc_file.save(doc_path)
+                file_paths.append(doc_path)
+
+                # Process document based on type
+                if doc_filename.lower().endswith(".pdf"):
+                    ocr_result = ocr_service.extract_text_from_pdf(doc_path)
+                else:
+                    ocr_result = ocr_service.extract_text_from_image(doc_path)
+
+                if "error" not in ocr_result:
+                    ocr_data = ocr_service.extract_structured_data(
+                        ocr_result["full_text"]
+                    )
+
+        # Process audio if provided
+        if "audio" in request.files:
+            audio_file = request.files["audio"]
+            if audio_file.filename != "":
+                if not validate_file_type(
+                    audio_file.filename, ["wav", "mp3", "m4a", "flac"]
+                ):
+                    return jsonify({"error": "Invalid audio file type"}), 400
+
+                # Save audio temporarily
+                audio_filename = secure_filename(audio_file.filename)
+                audio_path = os.path.join(
+                    current_app.config["UPLOAD_FOLDER"], audio_filename
+                )
+                audio_file.save(audio_path)
+                file_paths.append(audio_path)
+
+                # Process audio
+                speech_result = speech_service.transcribe_audio(
+                    audio_path, language_code
+                )
+                if "error" not in speech_result:
+                    transcript = speech_result["full_transcript"]
+
+        # Perform comprehensive business analysis
+        if ocr_data or transcript:
+            comprehensive_business_data = (
+                business_service.extract_comprehensive_business_info(
+                    ocr_data, transcript, language_code
+                )
+            )
+
+            # Calculate business score
+            business_score = business_service.calculate_comprehensive_business_score(
+                comprehensive_business_data
+            )
+
+            # Generate comprehensive business case
+            business_case = business_service.generate_comprehensive_business_case(
+                comprehensive_business_data, business_score, ocr_data, transcript
+            )
+        else:
+            return jsonify({"error": "No valid document or audio data provided"}), 400
+
+        # Clean up all temporary files
+        for path in file_paths:
+            if os.path.exists(path):
+                os.remove(path)
+
+        submission_id = str(uuid.uuid4())
+        processing_time = time.time() - start_time
+
+        # Store comprehensive analysis in user's history if authenticated
+        current_user = get_current_user()
+        if current_user:
+            user_service = UserService()
+            processed_doc = ProcessedDocument(
+                id=submission_id,
+                original_filename="comprehensive_analysis",
+                file_type="comprehensive",
+                upload_timestamp=datetime.now(),
+                processing_method="comprehensive_gemini_analysis",
+                raw_text=f"OCR: {ocr_data.get('raw_text', '')} | Transcript: {transcript}",
+                structured_data=comprehensive_business_data,
+                confidence=business_score.get("percentage", 0) / 100,
+                pages_processed=1,
+                file_size=sum(
+                    os.path.getsize(path) for path in file_paths if os.path.exists(path)
+                ),
+                processing_time=processing_time,
+                ocr_metadata={
+                    "analysis_type": "comprehensive",
+                    "has_document": bool(ocr_data),
+                    "has_audio": bool(transcript),
+                    "language_code": language_code,
+                    "business_score": business_score,
+                },
+            )
+
+            user_service.add_processed_document(current_user, processed_doc)
+
+        response_data = {
+            "submission_id": submission_id,
+            "comprehensive_business_data": comprehensive_business_data,
+            "business_score": business_score,
+            "business_case": business_case,
+            "ocr_data": ocr_data if ocr_data else None,
+            "transcript": transcript if transcript else None,
+            "language_code": language_code,
+            "processing_time": f"{processing_time:.2f}s",
+            "status": "comprehensive_analysis_complete",
+        }
+
+        # Add user info if authenticated
+        if current_user:
+            response_data["saved_to_history"] = True
+            response_data["user_id"] = current_user._id
+
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        # Ensure cleanup on any error
+        for path in file_paths:
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except:
+                pass
         return jsonify({"error": str(e)}), 500
 
 

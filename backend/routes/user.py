@@ -3,8 +3,15 @@ User routes for authentication and user data management
 """
 
 from flask import Blueprint, jsonify, request, g
-from middleware.auth import require_auth, optional_auth, get_current_user
+from middleware.auth import (
+    require_auth,
+    optional_auth,
+    get_current_user,
+    require_admin,
+    require_mentor,
+)
 from services.user_service import UserService
+from models.user import UserRole
 import logging
 
 user_bp = Blueprint("user", __name__)
@@ -41,6 +48,7 @@ def get_user_profile():
                         ),
                     },
                     "status": current_user.status.value,
+                    "role": current_user.role.value,
                     "created_at": current_user.created_at.isoformat(),
                     "last_activity": (
                         current_user.last_activity.isoformat()
@@ -240,6 +248,7 @@ def verify_token():
                             "email": current_user.profile.email,
                             "full_name": current_user.profile.full_name,
                             "status": current_user.status.value,
+                            "role": current_user.role.value,
                         },
                     }
                 ),
@@ -251,3 +260,121 @@ def verify_token():
     except Exception as e:
         logger.error(f"Error verifying token: {str(e)}")
         return jsonify({"valid": False, "error": "Token verification failed"}), 500
+
+
+@user_bp.route("/admin/users", methods=["GET"])
+@require_auth
+@require_admin
+def get_all_users():
+    """Get all users (admin only)"""
+    try:
+        user_service = UserService()
+
+        # Get pagination parameters
+        limit = min(int(request.args.get("limit", 50)), 100)
+        role_filter = request.args.get("role")
+
+        if role_filter:
+            try:
+                role = UserRole(role_filter)
+                users = user_service.get_users_by_role(role, limit)
+            except ValueError:
+                return jsonify({"error": "Invalid role specified"}), 400
+        else:
+            # For now, we'll get users by querying all roles
+            users = []
+            for role in UserRole:
+                users.extend(user_service.get_users_by_role(role, limit))
+            users = users[:limit]  # Apply limit after combining
+
+        users_data = []
+        for user in users:
+            users_data.append(
+                {
+                    "user_id": user._id,
+                    "supabase_user_id": user.supabase_user_id,
+                    "email": user.profile.email,
+                    "full_name": user.profile.full_name,
+                    "status": user.status.value,
+                    "role": user.role.value,
+                    "created_at": user.created_at.isoformat(),
+                    "last_activity": (
+                        user.last_activity.isoformat() if user.last_activity else None
+                    ),
+                    "total_documents_processed": user.total_documents_processed,
+                }
+            )
+
+        return (
+            jsonify(
+                {"users": users_data, "total_count": len(users_data), "limit": limit}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting all users: {str(e)}")
+        return jsonify({"error": "Failed to retrieve users"}), 500
+
+
+@user_bp.route("/admin/users/<supabase_user_id>/role", methods=["PUT"])
+@require_auth
+@require_mentor
+def update_user_role(supabase_user_id):
+    """Update user role (mentor only)"""
+    try:
+        data = request.get_json()
+
+        if not data or "role" not in data:
+            return jsonify({"error": "Role data required"}), 400
+
+        try:
+            new_role = UserRole(data["role"])
+        except ValueError:
+            return jsonify({"error": "Invalid role specified"}), 400
+
+        user_service = UserService()
+        success = user_service.update_user_role(supabase_user_id, new_role)
+
+        if success:
+            return (
+                jsonify(
+                    {
+                        "message": "User role updated successfully",
+                        "supabase_user_id": supabase_user_id,
+                        "new_role": new_role.value,
+                    }
+                ),
+                200,
+            )
+        else:
+            return jsonify({"error": "Failed to update user role"}), 500
+
+    except Exception as e:
+        logger.error(f"Error updating user role: {str(e)}")
+        return jsonify({"error": "Failed to update user role"}), 500
+
+
+@user_bp.route("/admin/stats", methods=["GET"])
+@require_auth
+@require_admin
+def get_admin_stats():
+    """Get admin statistics"""
+    try:
+        user_service = UserService()
+
+        # Get user counts by role
+        stats = {"user_counts": {}, "total_users": 0}
+
+        for role in UserRole:
+            users = user_service.get_users_by_role(
+                role, 1000
+            )  # Get up to 1000 users per role
+            stats["user_counts"][role.value] = len(users)
+            stats["total_users"] += len(users)
+
+        return jsonify(stats), 200
+
+    except Exception as e:
+        logger.error(f"Error getting admin stats: {str(e)}")
+        return jsonify({"error": "Failed to retrieve admin statistics"}), 500

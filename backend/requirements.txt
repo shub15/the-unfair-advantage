@@ -5,6 +5,7 @@ google-cloud-speech
 google-cloud-aiplatform
 google-cloud-translate
 google-genai
+google-generativeai
 pdf2image
 Werkzeug
 Pillow
@@ -15,3 +16,6 @@ requests
 pymongo
 supabase
 gotrue
+pydub
+numpy
+soundfile

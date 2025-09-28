@@ -13,7 +13,7 @@ from pymongo.database import Database
 from supabase import create_client, Client
 from flask import current_app
 
-from models.user import User, UserProfile, UserStatus, ProcessedDocument
+from models.user import User, UserProfile, UserStatus, UserRole, ProcessedDocument
 
 
 class UserService:
@@ -46,6 +46,7 @@ class UserService:
             self._users_collection.create_index("supabase_user_id", unique=True)
             self._users_collection.create_index("profile.email")
             self._users_collection.create_index("created_at")
+            self._users_collection.create_index("role")
 
             self.logger.info("MongoDB connection initialized successfully")
 
@@ -278,4 +279,80 @@ class UserService:
 
         except Exception as e:
             self.logger.error(f"Failed to update user preferences: {str(e)}")
+            return False
+
+    def update_user_role(self, supabase_user_id: str, role: UserRole) -> bool:
+        """Update user role"""
+        try:
+            if self._users_collection is None:
+                return False
+
+            result = self._users_collection.update_one(
+                {"supabase_user_id": supabase_user_id},
+                {
+                    "$set": {
+                        "role": role.value,
+                        "updated_at": datetime.now(),
+                    }
+                },
+            )
+
+            return result.modified_count > 0
+
+        except Exception as e:
+            self.logger.error(f"Failed to update user role: {str(e)}")
+            return False
+
+    def get_users_by_role(self, role: UserRole, limit: int = 100) -> List[User]:
+        """Get users by role"""
+        try:
+            if self._users_collection is None:
+                return []
+
+            user_docs = self._users_collection.find({"role": role.value}).limit(limit)
+
+            users = []
+            for doc in user_docs:
+                users.append(User.from_dict(doc))
+
+            return users
+
+        except Exception as e:
+            self.logger.error(f"Failed to get users by role: {str(e)}")
+            return []
+
+    def is_admin(self, supabase_user_id: str) -> bool:
+        """Check if user has admin role"""
+        try:
+            user = self.get_user_by_supabase_id(supabase_user_id)
+            if user:
+                return user.role in [UserRole.ADMIN, UserRole.MENTOR]
+            return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to check admin status: {str(e)}")
+            return False
+
+    def is_mentor(self, supabase_user_id: str) -> bool:
+        """Check if user has mentor role"""
+        try:
+            user = self.get_user_by_supabase_id(supabase_user_id)
+            if user:
+                return user.role == UserRole.MENTOR
+            return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to check mentor status: {str(e)}")
+            return False
+
+    def is_super_admin(self, supabase_user_id: str) -> bool:
+        """Check if user has super admin role"""
+        try:
+            user = self.get_user_by_supabase_id(supabase_user_id)
+            if user:
+                return user.role == UserRole.SUPER_ADMIN
+            return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to check super admin status: {str(e)}")
             return False
