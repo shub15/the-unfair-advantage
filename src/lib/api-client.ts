@@ -390,7 +390,6 @@ export class ApiClient {
       if (!response.ok) {
         throw new Error(data.message || data.error || `HTTP ${response.status}`)
       }
-
       return {
         success: true,
         data
@@ -412,7 +411,6 @@ export class ApiClient {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      
       Object.entries(additionalFields).forEach(([key, value]) => {
         formData.append(key, value)
       })
@@ -427,7 +425,6 @@ export class ApiClient {
       if (!response.ok) {
         throw new Error(data.message || data.error || `HTTP ${response.status}`)
       }
-
       return {
         success: true,
         data
