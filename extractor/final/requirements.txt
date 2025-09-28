@@ -1,0 +1,49 @@
+# Requirements for The Unfair Advantage - Unified Business Evaluator
+
+# Core Streamlit framework
+streamlit>=1.28.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Google Cloud services
+google-cloud-speech>=2.21.0
+google-cloud-texttospeech>=2.16.0
+
+# Google Generative AI (Gemini)
+google-generativeai>=0.3.0
+
+# Image processing
+Pillow>=10.0.0
+
+# Audio processing
+pydub>=0.25.1
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.24.0
+
+# System utilities
+pathlib2>=2.3.7
+
+# Regular expressions (built-in, but ensuring compatibility)
+regex>=2023.8.8
+
+# JSON handling (built-in, but for completeness)
+jsonschema>=4.19.0
+
+# Additional dependencies for audio/video conversion
+# Note: FFmpeg must be installed separately on the system
+# tempfile - built-in module
+
+# Subprocess management (built-in)
+# subprocess - built-in module
+
+# Operating system interface (built-in)
+# os - built-in module
+
+# I/O operations (built-in)
+# io - built-in module
+
+# Additional dependencies for audio/video conversion
+# Note: FFmpeg must be installed separately on the system
+# Poppler must be installed separately for PDF processing
