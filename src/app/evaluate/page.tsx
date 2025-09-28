@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import IdeaSubmissionForm from '@/components/forms/idea-submission-form'
 import Header from '@/components/layout/header'
 import { Lightbulb } from 'lucide-react'
+import ProtectedRoute from '@/components/auth/protected-route'
 
 export default function EvaluatePage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+      <ProtectedRoute>
       <main className="container mx-auto px-4 pt-20 pb-16">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
@@ -30,6 +31,8 @@ export default function EvaluatePage() {
           </Card>
         </div>
       </main>
+      </ProtectedRoute>
+      
     </div>
   )
 }

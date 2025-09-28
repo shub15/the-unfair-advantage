@@ -85,12 +85,11 @@ export default function IdeaSubmissionForm() {
         {/* Input Methods */}
         <Card>
           <CardContent className="p-6">
-            <Tabs defaultValue="text" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="text">Type Text</TabsTrigger>
+            <Tabs defaultValue="handwriting" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                {/* <TabsTrigger value="text">Type Text</TabsTrigger> */}
                 <TabsTrigger value="handwriting">Handwriting</TabsTrigger>
                 <TabsTrigger value="audio">Voice Record</TabsTrigger>
-                <TabsTrigger value="file">Upload File</TabsTrigger>
               </TabsList>
 
               <TabsContent value="text" className="space-y-4 mt-6">
@@ -135,9 +134,7 @@ export default function IdeaSubmissionForm() {
                 <AudioRecorder onTranscriptionComplete={handleTextExtraction} />
               </TabsContent>
 
-              <TabsContent value="file" className="mt-6">
-                <FileUploadZone onTextExtracted={handleTextExtraction} />
-              </TabsContent>
+              
             </Tabs>
           </CardContent>
         </Card>
