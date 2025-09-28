@@ -12,6 +12,7 @@ import logging
 from routes.upload import upload_bp
 from routes.evaluate import evaluate_bp
 from routes.feedback import feedback_bp
+from routes.user import user_bp
 from config import Config
 from middleware.business_context import BusinessContextMiddleware
 
@@ -51,6 +52,7 @@ def create_app():
     app.register_blueprint(upload_bp, url_prefix="/api/upload")
     app.register_blueprint(evaluate_bp, url_prefix="/api/evaluate")
     app.register_blueprint(feedback_bp, url_prefix="/api/feedback")
+    app.register_blueprint(user_bp, url_prefix="/api/user")
 
     # Ensure upload directory exists
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

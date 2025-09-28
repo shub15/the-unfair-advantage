@@ -4,6 +4,7 @@ Models package for business case and evaluation data structures
 
 from .business_case import BusinessCase, BusinessCaseInput
 from .evaluation import EvaluationResult, EvaluationCriteria, EvaluationScore
+from .user import User, UserProfile, ProcessedDocument, UserStatus
 
 __all__ = [
     "BusinessCase",
@@ -11,4 +12,8 @@ __all__ = [
     "EvaluationResult",
     "EvaluationCriteria",
     "EvaluationScore",
+    "User",
+    "UserProfile",
+    "ProcessedDocument",
+    "UserStatus",
 ]

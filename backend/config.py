@@ -45,6 +45,15 @@ class Config:
     # Poppler configuration for PDF processing
     POPPLER_PATH = os.environ.get("POPPLER_PATH")  # Path to Poppler binaries
 
+    # Supabase configuration
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")
+    SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+    SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+
+    # MongoDB configuration
+    MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/")
+    MONGODB_DATABASE = os.environ.get("MONGODB_DATABASE", "unfair_advantage")
+
     # Google Cloud Speech-to-Text
     SPEECH_TO_TEXT_LANGUAGE_CODES = [
         "en-IN",  # English (India)
