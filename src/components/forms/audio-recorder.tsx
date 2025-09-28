@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Mic, Pause, Square, Trash2, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SUPPORTED_LANGUAGES } from '@/lib/constants'
+import { SUPPORTED_LANGUsuAGES } from '@/lib/constants'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api-client'
 import { useAudioRecorder } from '@/hooks/use-audio-recorder'
@@ -77,7 +77,7 @@ export default function AudioRecorder({ onTranscriptionComplete }: AudioRecorder
   return (
     <div className="space-y-4">
       {/* Language Selection */}
-      <div className="flex items-center gap-4">
+      {/* <div className="flex items-center gap-4">
         <label className="text-sm font-medium">Recording Language:</label>
         <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
           <SelectTrigger className="w-48">
@@ -89,7 +89,7 @@ export default function AudioRecorder({ onTranscriptionComplete }: AudioRecorder
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
 
       <Card>
         <CardContent className="p-6">
